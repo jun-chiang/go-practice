@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/jun-chiang/go-practice/wordTranslate/domain"
 )
@@ -65,14 +67,16 @@ func translate(word string) domain.DictResponse {
 		log.Fatal(err)
 	}
 	// 读取response中的数据
-	bodyText, err := ioutil.ReadAll(resp.Body)
+	bodyText, err := io.ReadAll(resp.Body)
+	// 延迟关闭流
+	defer resp.Body.Close()
 	// 异常处理
 	if err != nil {
 		log.Fatal(err)
 	}
 	// 反序列化成对象
 	dictResponse := domain.DictResponse{}
-	err = json.Unmarshal(bodyText, &dictRequest)
+	err = json.Unmarshal(bodyText, &dictResponse)
 	// 异常处理
 	if err != nil {
 		log.Fatal(err)
@@ -81,7 +85,34 @@ func translate(word string) domain.DictResponse {
 }
 
 func main() {
-	// 调用封装好的translate方法
-	result := translate("hello")
-	fmt.Printf("%#v", result)
+	// 基于标准输入流创建一个缓冲读取器
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("请输入要查询的单词,输入#退出程序:")
+		// 从控制台获取输入
+		input, err := reader.ReadString('\n')
+		// 错误处理
+		if err != nil {
+			log.Fatal(err)
+		}
+		// 去除多余的\r\n
+		input = strings.TrimSuffix(input, "\r\n")
+		// 判断是否要退出程序
+		if input == "#" {
+			fmt.Println("期待您的下次使用，再见！")
+			break
+		}
+		// 调用封装好的translate方法
+		result := translate(input)
+		dictionary := &result.Dictionary
+		fmt.Println()
+		// 打印单词以及音标
+		fmt.Println(dictionary.Entry, dictionary.Prons.En)
+		// 循环打印单词的释义
+		for _, explanation := range dictionary.Explanations {
+			fmt.Println(explanation)
+		}
+		fmt.Println()
+	}
+
 }
