@@ -3,7 +3,6 @@ package lockDemo
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
 // 共享内存实现通信
@@ -28,15 +27,24 @@ func addWithoutLock() {
 
 // 测试函数 测试加锁与否的效果
 func AddLockDemo() {
+	var wg sync.WaitGroup
+	wg.Add(5)
 	for i := 0; i < 5; i++ {
-		go addWithLock()
+		go func() {
+			defer wg.Done()
+			addWithLock()
+		}()
 	}
-	time.Sleep(time.Second)
+	wg.Wait()
 	fmt.Println("The result of add with lock:", x)
 	x = 0
+	wg.Add(5)
 	for i := 0; i < 5; i++ {
-		go addWithoutLock()
+		go func() {
+			defer wg.Done()
+			addWithoutLock()
+		}()
 	}
-	time.Sleep(time.Second)
+	wg.Wait()
 	fmt.Println("The result of add without lock:", x)
 }
